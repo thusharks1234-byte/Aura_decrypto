@@ -31,6 +31,7 @@ const CreateAuctionPage: React.FC = () => {
     title: '', description: '', asset_image_url: '', asset_type: 'NFT',
     asset_token_id: '', auction_type: 'standard' as 'standard' | 'vickrey',
     reserve_price_eth: '', commit_hours: '48', reveal_hours: '24',
+    is_demo: false,
   });
 
   const update = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }));
@@ -54,6 +55,7 @@ const CreateAuctionPage: React.FC = () => {
         reveal_end: revealEnd.toISOString(),
         contract_address: `0x${Date.now().toString(16).padStart(40, '0')}`,
         creator_id: user.id, tx_hash: null, chain_id: 11155111,
+        is_demo: form.is_demo,
       });
       if (dbError) throw dbError;
       navigate(`/auction/${data!.id}`);
@@ -80,7 +82,7 @@ const CreateAuctionPage: React.FC = () => {
           <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 32 }}>Configure your auction. Bids will be cryptographically hidden until reveal.</p>
           {error && <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, color: '#ff6b6b', fontSize: '0.875rem' }}>{error}</div>}
           <form onSubmit={handleSubmit}>
-            <div style={sectionStyle}>
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} style={sectionStyle}>
               <h3 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, marginBottom: 20, color: '#00ff88' }}>A — Asset Details</h3>
               <div style={{ marginBottom: 16 }}><label style={labelStyle}>Auction Title *</label><input style={inputStyle} placeholder="e.g. Eternal Void #042" value={form.title} onChange={e => update('title', e.target.value)} required /></div>
               <div style={{ marginBottom: 16 }}><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: 90, resize: 'vertical' }} placeholder="Describe the asset..." value={form.description} onChange={e => update('description', e.target.value)} /></div>
@@ -89,18 +91,58 @@ const CreateAuctionPage: React.FC = () => {
                 <div><label style={labelStyle}>Asset Type</label><select style={inputStyle} value={form.asset_type} onChange={e => update('asset_type', e.target.value)}><option>NFT</option><option>Token</option><option>Physical</option><option>Other</option></select></div>
                 <div><label style={labelStyle}>Token ID</label><input style={inputStyle} placeholder="e.g. 1234" value={form.asset_token_id} onChange={e => update('asset_token_id', e.target.value)} /></div>
               </div>
-            </div>
+            </motion.div>
 
             <div style={sectionStyle}>
               <h3 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, marginBottom: 20, color: '#00ccff' }}>B — Auction Config</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 {(['standard', 'vickrey'] as const).map(t => (
-                  <button key={t} type="button" onClick={() => update('auction_type', t)} style={{ padding: '14px', borderRadius: 10, border: `2px solid ${form.auction_type === t ? '#00ff88' : 'rgba(255,255,255,0.1)'}`, background: form.auction_type === t ? 'rgba(0,255,136,0.08)' : 'transparent', cursor: 'pointer', textAlign: 'left' }}>
+                  <motion.button 
+                    key={t} 
+                    type="button" 
+                    whileHover={{ scale: 1.02, background: form.auction_type === t ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.05)' }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => update('auction_type', t)} 
+                    style={{ padding: '14px', borderRadius: 10, border: `2px solid ${form.auction_type === t ? '#00ff88' : 'rgba(255,255,255,0.1)'}`, background: form.auction_type === t ? 'rgba(0,255,136,0.08)' : 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
                     <div style={{ fontWeight: 700, color: form.auction_type === t ? '#00ff88' : '#fff', textTransform: 'capitalize', marginBottom: 4 }}>{t}</div>
                     <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{t === 'standard' ? 'Winner pays own bid' : 'Winner pays 2nd highest (fair)'}</div>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
+
+              {/* Demo / Live toggle */}
+              <label style={{ ...labelStyle, marginTop: 16 }}>Auction Mode</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <motion.button 
+                  type="button" 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setForm(f => ({ ...f, is_demo: false }))} 
+                  style={{
+                    padding: '14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                    border: `2px solid ${!form.is_demo ? '#00ff88' : 'rgba(255,255,255,0.1)'}`,
+                    background: !form.is_demo ? 'rgba(0,255,136,0.08)' : 'transparent',
+                    transition: 'all 0.2s'
+                  }}>
+                  <div style={{ fontWeight: 700, color: !form.is_demo ? '#00ff88' : '#fff', marginBottom: 4 }}>● Live</div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Uses real ETH from MetaMask</div>
+                </motion.button>
+                <motion.button 
+                  type="button" 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setForm(f => ({ ...f, is_demo: true }))} 
+                  style={{
+                    padding: '14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                    border: `2px solid ${form.is_demo ? '#ffcc00' : 'rgba(255,255,255,0.1)'}`,
+                    background: form.is_demo ? 'rgba(255,204,0,0.08)' : 'transparent',
+                    transition: 'all 0.2s'
+                  }}>
+                  <div style={{ fontWeight: 700, color: form.is_demo ? '#ffcc00' : '#fff', marginBottom: 4 }}>⚗ Demo</div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Uses demo balance (5 ETH)</div>
+                </motion.button>
+              </div>
+
               <div style={{ marginBottom: 16 }}><label style={labelStyle}>Reserve Price (ETH) *</label><input style={inputStyle} type="number" min="0" step="0.001" placeholder="0.5" value={form.reserve_price_eth} onChange={e => update('reserve_price_eth', e.target.value)} required /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div><label style={labelStyle}>Commit Duration (hrs)</label><input style={inputStyle} type="number" min="1" value={form.commit_hours} onChange={e => update('commit_hours', e.target.value)} /></div>
@@ -113,7 +155,11 @@ const CreateAuctionPage: React.FC = () => {
               <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, margin: 0 }}>In a real deployment, this triggers a smart contract factory transaction. For this demo, the auction record is stored in Supabase and the commit/reveal flow is fully functional.</p>
             </div>
 
-            <motion.button type="submit" disabled={isSubmitting} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            <motion.button 
+              type="submit" 
+              disabled={isSubmitting} 
+              whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(0,255,136,0.3)' }} 
+              whileTap={{ scale: 0.98 }}
               style={{ width: '100%', padding: '16px', borderRadius: 12, border: 'none', background: isSubmitting ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #00ff88, #00ccff)', color: isSubmitting ? 'rgba(255,255,255,0.4)' : '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '1.05rem', cursor: isSubmitting ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
               {isSubmitting ? 'Creating...' : <> Deploy Auction <ChevronRight size={18} /></>}
             </motion.button>

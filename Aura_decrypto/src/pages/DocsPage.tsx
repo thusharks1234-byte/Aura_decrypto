@@ -56,7 +56,10 @@ const DocsPage: React.FC = () => (
             { icon: Key, title: 'Vickrey (2nd-Price) Auction', desc: 'In a Vickrey auction, the highest bidder wins but pays the second-highest price. This makes bidding your true valuation the dominant strategy — no more bid shading or strategic underbidding.' },
             { icon: RefreshCw, title: 'Pull-Payment Refunds', desc: 'Losing bidders claim refunds by calling claimRefund(). We use the Checks-Effects-Interactions pattern with OpenZeppelin\'s ReentrancyGuard to prevent reentrancy attacks.' },
           ].map((c, i) => (
-            <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '24px', display: 'flex', gap: 18, alignItems: 'flex-start' }}>
+            <motion.div 
+              key={i} 
+              whileHover={{ y: -5, background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(0,255,136,0.2)' }}
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '24px', display: 'flex', gap: 18, alignItems: 'flex-start', transition: 'all 0.3s', cursor: 'default' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(0,255,136,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <c.icon size={20} color="#00ff88" />
               </div>
@@ -64,7 +67,7 @@ const DocsPage: React.FC = () => (
                 <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, marginBottom: 6 }}>{c.title}</h4>
                 <p style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, fontSize: '0.88rem' }}>{c.desc}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </motion.div>
@@ -93,12 +96,18 @@ const DocsPage: React.FC = () => (
         <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>Create your first sealed-bid auction or join one now.</p>
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link to="/dashboard" style={{ textDecoration: 'none' }}>
-            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <motion.button 
+              whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(0,255,136,0.3)' }}
+              whileTap={{ scale: 0.95 }}
+              className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               Explore Auctions <ArrowRight size={16} />
-            </button>
+            </motion.button>
           </Link>
           <Link to="/auction/create" style={{ textDecoration: 'none' }}>
-            <button className="btn-secondary">Create Auction</button>
+            <motion.button 
+              whileHover={{ scale: 1.05, background: 'rgba(255,255,255,0.08)' }}
+              whileTap={{ scale: 0.95 }}
+              className="btn-secondary">Create Auction</motion.button>
           </Link>
         </div>
       </motion.div>

@@ -22,6 +22,7 @@ export interface Auction {
   price_paid_wei: string | null;
   tx_hash: string | null;
   chain_id: number;
+  is_demo: boolean;
   created_at: string;
   profiles?: { display_name: string; wallet_address: string | null };
 }
@@ -141,8 +142,78 @@ export const markNotificationRead = async (id: string) => {
   await supabase.from('notifications').update({ read: true }).eq('id', id);
 };
 
+export const markAllNotificationsRead = async (userId: string) => {
+  await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+};
+
 export const createNotification = async (n: Omit<Notification, 'id' | 'created_at' | 'read'>) => {
   await supabase.from('notifications').insert({ ...n, read: false });
+};
+
+// ---- Demo Balance ----
+export const getDemoBalance = async (userId: string): Promise<number> => {
+  const { data } = await supabase.from('profiles').select('demo_balance').eq('id', userId).single();
+  return data?.demo_balance ?? 5.0;
+};
+
+export const deductDemoBalance = async (userId: string, ethAmount: number): Promise<{ success: boolean; newBalance: number }> => {
+  const current = await getDemoBalance(userId);
+  if (current < ethAmount) return { success: false, newBalance: current };
+  const newBal = Math.round((current - ethAmount) * 10000) / 10000;
+  await supabase.from('profiles').update({ demo_balance: newBal }).eq('id', userId);
+  return { success: true, newBalance: newBal };
+};
+
+export const refundDemoBalance = async (userId: string, ethAmount: number): Promise<void> => {
+  const current = await getDemoBalance(userId);
+  const newBal = Math.round((current + ethAmount) * 10000) / 10000;
+  await supabase.from('profiles').update({ demo_balance: newBal }).eq('id', userId);
+};
+
+// ---- Auto Status Transition ----
+export const triggerStatusTransitions = async () => {
+  await supabase.rpc('auto_transition_auction_statuses');
+};
+
+// ---- Platform Stats ----
+export interface PlatformStats {
+  liveAuctions: number;
+  totalBidders: number;
+  volumeLockedWei: string;
+}
+
+export const getPlatformStats = async (): Promise<{ data: PlatformStats | null; error: unknown }> => {
+  try {
+    // Count live auctions (commit or reveal phase)
+    const { count: liveCount, error: liveErr } = await supabase
+      .from('auctions')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['commit', 'reveal']);
+    if (liveErr) throw liveErr;
+
+    // Get unique bidder count and total volume
+    const { data: bidData, error: bidErr } = await supabase
+      .from('bids')
+      .select('bidder_address, deposit_wei');
+    if (bidErr) throw bidErr;
+
+    const uniqueBidders = new Set((bidData || []).map(b => b.bidder_address)).size;
+    const volumeWei = (bidData || []).reduce(
+      (acc, b) => acc + BigInt(b.deposit_wei || '0'),
+      BigInt(0)
+    );
+
+    return {
+      data: {
+        liveAuctions: liveCount || 0,
+        totalBidders: uniqueBidders,
+        volumeLockedWei: volumeWei.toString(),
+      },
+      error: null,
+    };
+  } catch (error) {
+    return { data: null, error };
+  }
 };
 
 // ---- Auction Events ----

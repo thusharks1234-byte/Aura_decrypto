@@ -1,19 +1,29 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gavel, Bell, Plus, User, Menu, X, ChevronDown, LogOut, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Gavel, Plus, User, Menu, X, ChevronDown, LogOut, LayoutDashboard, BookOpen, Coins } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
+import { getDemoBalance } from '../lib/supabase';
+import NotificationBell from './NotificationBell';
 
 const shortenAddr = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
 
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { address, isConnected, connect, isConnecting } = useWallet();
   const { user, profile, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [demoBalance, setDemoBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      getDemoBalance(user.id).then(bal => setDemoBalance(bal));
+    } else {
+      setDemoBalance(null);
+    }
+  }, [user]);
 
   const navLinks = [
     { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
@@ -48,14 +58,14 @@ const Navbar: React.FC = () => {
           {/* Desktop Nav */}
           <div className="desktop-nav" style={{ alignItems: 'center', gap: 4, display: 'none' }}>
             {navLinks.map(link => (
-              <Link key={link.to} to={link.to} style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 8, textDecoration: 'none',
-                fontSize: '0.875rem', fontWeight: 500,
-                color: isActive(link.to) ? '#00ff88' : 'rgba(255,255,255,0.6)',
-                background: isActive(link.to) ? 'rgba(0,255,136,0.08)' : 'transparent',
-                transition: 'all 0.2s',
-              }}>
+                <Link key={link.to} to={link.to} className="interactive-hover" style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', borderRadius: 8, textDecoration: 'none',
+                  fontSize: '0.875rem', fontWeight: 500,
+                  color: isActive(link.to) ? '#00ff88' : 'rgba(255,255,255,0.6)',
+                  background: isActive(link.to) ? 'rgba(0,255,136,0.08)' : 'transparent',
+                  transition: 'all 0.2s',
+                }}>
                 <link.icon size={15} />
                 {link.label}
               </Link>
@@ -64,12 +74,19 @@ const Navbar: React.FC = () => {
 
           {/* Right Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {user && (
-              <button style={{ position: 'relative', background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: 8 }}>
-                <Bell size={20} />
-                <span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, background: '#ff4d4d', borderRadius: '50%', border: '2px solid #050505' }} />
-              </button>
+            {user && demoBalance !== null && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(255,204,0,0.08)', border: '1px solid rgba(255,204,0,0.2)',
+                borderRadius: 100, padding: '5px 12px',
+                fontSize: '0.78rem', fontWeight: 700, color: '#ffcc00',
+              }}>
+                <Coins size={14} />
+                {demoBalance.toFixed(2)} <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>DEMO</span>
+              </div>
             )}
+
+            <NotificationBell />
 
             {isConnected && address ? (
               <div style={{ position: 'relative' }}>
@@ -118,19 +135,22 @@ const Navbar: React.FC = () => {
             ) : (
               <button
                 onClick={connect}
-                disabled={isConnecting}
-                style={{
-                  background: 'linear-gradient(135deg, #00ff88, #00ccff)',
-                  border: 'none', borderRadius: 8, padding: '9px 20px',
-                  fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '0.875rem',
-                  color: '#000', cursor: isConnecting ? 'wait' : 'pointer', whiteSpace: 'nowrap',
-                }}
+                  disabled={isConnecting}
+                  className="btn-primary interactive-hover"
+                  style={{
+                    background: 'linear-gradient(135deg, #00ff88, #00ccff)',
+                    border: 'none', borderRadius: 8, padding: '9px 20px',
+                    fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '0.875rem',
+                    color: '#000', cursor: isConnecting ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+                  }}
               >
                 {isConnecting ? 'Connecting...' : 'Connect Wallet'}
               </button>
             )}
 
-            <button onClick={() => setMobileOpen(true)} className="mobile-menu-btn" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 4 }}>
+            <button onClick={() => setMobileOpen(true)}
+                className="interactive-hover"
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 4 }}>
               <Menu size={22} />
             </button>
           </div>
@@ -152,20 +172,24 @@ const Navbar: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {navLinks.map(link => (
                 <Link key={link.to} to={link.to} onClick={() => setMobileOpen(false)} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderRadius: 12,
-                  textDecoration: 'none', fontSize: '1.1rem', fontWeight: 600,
-                  color: isActive(link.to) ? '#00ff88' : '#fff',
-                  background: isActive(link.to) ? 'rgba(0,255,136,0.08)' : 'transparent',
-                }}>
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderRadius: 12,
+                    textDecoration: 'none', fontSize: '1.1rem', fontWeight: 600,
+                    color: isActive(link.to) ? '#00ff88' : '#fff',
+                    background: isActive(link.to) ? 'rgba(0,255,136,0.08)' : 'transparent',
+                    transition: 'all 0.2s',
+                  }}
+                  className="interactive-hover">
                   <link.icon size={20} /> {link.label}
                 </Link>
               ))}
               {!isConnected && (
                 <button onClick={() => { connect(); setMobileOpen(false); }} style={{
-                  marginTop: 20, padding: '16px', borderRadius: 12, border: 'none',
-                  background: 'linear-gradient(135deg, #00ff88, #00ccff)',
-                  color: '#000', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '1.1rem', cursor: 'pointer',
-                }}>
+                    marginTop: 20, padding: '16px', borderRadius: 12, border: 'none',
+                    background: 'linear-gradient(135deg, #00ff88, #00ccff)',
+                    color: '#000', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '1.1rem', cursor: 'pointer',
+                    transition: 'transform 0.2s',
+                  }}
+                  className="btn-primary interactive-hover">
                   Connect Wallet
                 </button>
               )}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Copy, Download, Eye, EyeOff, AlertTriangle, CheckCircle } from 'lucide-react';
-import { getAuction, getMyBid, submitBid, logAuctionEvent } from '../lib/supabase';
+import { ArrowLeft, Copy, Eye, EyeOff, AlertTriangle, CheckCircle, Coins, Wallet } from 'lucide-react';
+import { getAuction, getMyBid, submitBid, logAuctionEvent, deductDemoBalance, getDemoBalance } from '../lib/supabase';
 import { generateSecret, computeCommitHash, ethToWei, generateBidBackup, downloadFile } from '../lib/crypto';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../contexts/WalletContext';
@@ -21,7 +21,7 @@ const CommitPage: React.FC = () => {
   const { user } = useAuth();
   const { address, connect, isConnected } = useWallet();
   const [authOpen, setAuthOpen] = useState(false);
-  const [auction, setAuction] = useState<{ title: string; status: string; reserve_price_wei: string } | null>(null);
+  const [auction, setAuction] = useState<{ title: string; status: string; reserve_price_wei: string; is_demo: boolean } | null>(null);
   const [step, setStep] = useState(0);
   const [amountEth, setAmountEth] = useState('');
   const [secret, setSecret] = useState(generateSecret());
@@ -30,11 +30,17 @@ const CommitPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [existingBid, setExistingBid] = useState(false);
+  const [demoBalance, setDemoBalance] = useState(0);
+
+  const isDemo = auction?.is_demo ?? false;
 
   useEffect(() => {
     if (!id) return;
     getAuction(id).then(({ data }) => setAuction(data));
-    if (user && id) getMyBid(id, user.id).then(({ data }) => { if (data) setExistingBid(true); });
+    if (user && id) {
+      getMyBid(id, user.id).then(({ data }) => { if (data) setExistingBid(true); });
+      getDemoBalance(user.id).then(bal => setDemoBalance(bal));
+    }
   }, [id, user]);
 
   const handlePreview = () => {
@@ -47,20 +53,30 @@ const CommitPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!user || !address || !id) return;
+    if (!user || !id) return;
+    // For real auctions, require wallet; for demo, use demo balance
+    if (!isDemo && !address) return;
+    const bidderAddr = isDemo ? (address || `0xdemo${user.id.replace(/-/g, '').slice(0, 34)}`) : address!;
+
     setIsSubmitting(true); setError('');
     try {
+      // Demo: deduct from demo balance
+      if (isDemo) {
+        const { success } = await deductDemoBalance(user.id, Number(amountEth));
+        if (!success) throw new Error(`Insufficient demo balance. You have ${demoBalance.toFixed(4)} DEMO ETH.`);
+      }
+
       const { error: dbErr } = await submitBid({
         auction_id: id, bidder_id: user.id,
-        bidder_address: address, commit_hash: commitHash,
+        bidder_address: bidderAddr, commit_hash: commitHash,
         encrypted_secret: secret, deposit_wei: ethToWei(amountEth),
-        commit_tx_hash: `0x${Math.random().toString(16).slice(2)}`,
+        commit_tx_hash: isDemo ? `0xdemo_${Date.now().toString(16)}` : `0x${Math.random().toString(16).slice(2)}`,
         reveal_tx_hash: null,
       });
       if (dbErr) throw dbErr;
-      await logAuctionEvent({ auction_id: id, event_type: 'BidCommitted', actor_address: address, data: { hash: commitHash } });
+      await logAuctionEvent({ auction_id: id, event_type: 'BidCommitted', actor_address: bidderAddr, data: { hash: commitHash, is_demo: isDemo } });
       // Save backup
-      const backup = generateBidBackup({ auctionId: id, auctionTitle: auction?.title || '', amountEth, secret, commitHash, bidderAddress: address, timestamp: new Date().toISOString() });
+      const backup = generateBidBackup({ auctionId: id, auctionTitle: auction?.title || '', amountEth, secret, commitHash, bidderAddress: bidderAddr, timestamp: new Date().toISOString() });
       downloadFile(backup, `sealbid-backup-${id.slice(0, 8)}.json`);
       setStep(2);
     } catch (e: unknown) {
@@ -80,20 +96,28 @@ const CommitPage: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#050505', paddingTop: 64 }}>
       <div style={{ maxWidth: 580, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <Link to={`/auction/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }}>
-          <ArrowLeft size={16} /> Back to Auction
-        </Link>
+        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+          <Link to={`/auction/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }} className="interactive-hover">
+            <ArrowLeft size={16} /> Back to Auction
+          </Link>
+        </motion.div>
 
         {/* Step Progress */}
         <div style={{ display: 'flex', gap: 0, marginBottom: 36 }}>
           {STEPS.map((s, i) => (
             <div key={s} style={{ flex: 1, display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                {i > 0 && <div style={{ flex: 1, height: 2, background: i <= step ? '#00ff88' : 'rgba(255,255,255,0.1)' }} />}
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: i <= step ? 'linear-gradient(135deg, #00ff88, #00ccff)' : 'rgba(255,255,255,0.07)', border: `2px solid ${i <= step ? '#00ff88' : 'rgba(255,255,255,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: i <= step ? '#000' : 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
+                {i > 0 && <div style={{ flex: 1, height: 2, background: i <= step ? '#00ff88' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />}
+                <motion.div 
+                  initial={false}
+                  animate={{ 
+                    scale: i === step ? 1.1 : 1,
+                    boxShadow: i === step ? '0 0 15px rgba(0,255,136,0.3)' : 'none'
+                  }}
+                  style={{ width: 32, height: 32, borderRadius: '50%', background: i <= step ? 'linear-gradient(135deg, #00ff88, #00ccff)' : 'rgba(255,255,255,0.07)', border: `2px solid ${i <= step ? '#00ff88' : 'rgba(255,255,255,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: i <= step ? '#000' : 'rgba(255,255,255,0.3)', flexShrink: 0, transition: 'all 0.3s' }}>
                   {i < step ? '✓' : i + 1}
-                </div>
-                {i < STEPS.length - 1 && <div style={{ flex: 1, height: 2, background: i < step ? '#00ff88' : 'rgba(255,255,255,0.1)' }} />}
+                </motion.div>
+                {i < STEPS.length - 1 && <div style={{ flex: 1, height: 2, background: i < step ? '#00ff88' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />}
               </div>
               <span style={{ fontSize: '0.72rem', color: i === step ? '#fff' : 'rgba(255,255,255,0.3)', fontWeight: i === step ? 600 : 400 }}>{s}</span>
             </div>
@@ -105,7 +129,19 @@ const CommitPage: React.FC = () => {
             {step === 0 && (
               <>
                 <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.5rem', fontWeight: 800, marginBottom: 6 }}>Place Your Sealed Bid</h2>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem', marginBottom: 24 }}>Your bid amount stays hidden until the reveal phase.</p>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem', marginBottom: 16 }}>Your bid amount stays hidden until the reveal phase.</p>
+                {/* Demo / Real banner */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 10, marginBottom: 16,
+                  background: isDemo ? 'rgba(255,204,0,0.08)' : 'rgba(0,255,136,0.06)',
+                  border: `1px solid ${isDemo ? 'rgba(255,204,0,0.25)' : 'rgba(0,255,136,0.2)'}`,
+                  fontSize: '0.82rem', color: isDemo ? '#ffcc00' : '#00ff88',
+                }}>
+                  {isDemo ? <Coins size={16} /> : <Wallet size={16} />}
+                  {isDemo
+                    ? `Demo Mode — Using demo balance (${demoBalance.toFixed(2)} ETH available)`
+                    : 'Live Mode — This bid will use real ETH from your MetaMask wallet'}
+                </div>
                 {existingBid && <div style={{ background: 'rgba(255,204,0,0.1)', border: '1px solid rgba(255,204,0,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, color: '#ffcc00', fontSize: '0.85rem' }}>⚠ You already have an active bid on this auction.</div>}
                 {error && <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, color: '#ff6b6b', fontSize: '0.85rem' }}>{error}</div>}
                 <div style={{ marginBottom: 20 }}>
@@ -125,10 +161,18 @@ const CommitPage: React.FC = () => {
                   </div>
                   <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>💾 Save this secret. You cannot reveal your bid without it.</p>
                 </div>
-                {!isConnected ? (
-                  <button onClick={connect} style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.08)', color: '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: 'pointer' }}>Connect Wallet First</button>
+                {!isDemo && !isConnected ? (
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={connect} 
+                    style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.08)', color: '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: 'pointer' }}>Connect Wallet First</motion.button>
                 ) : (
-                  <button onClick={handlePreview} style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #00ff88, #00ccff)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: 'pointer' }}>Preview Commitment →</button>
+                  <motion.button 
+                    whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(0,255,136,0.2)' }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handlePreview} 
+                    style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #00ff88, #00ccff)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: 'pointer' }}>Preview Commitment →</motion.button>
                 )}
               </>
             )}
@@ -153,10 +197,19 @@ const CommitPage: React.FC = () => {
                   ⚠ Once submitted, your bid is sealed. A backup JSON will be downloaded automatically.
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => setStep(0)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 600, cursor: 'pointer' }}>← Edit</button>
-                  <button onClick={handleSubmit} disabled={isSubmitting} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #00ff88, #00ccff)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.7 : 1 }}>
+                  <motion.button 
+                    whileHover={{ background: 'rgba(255,255,255,0.05)' }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setStep(0)} 
+                    style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 600, cursor: 'pointer' }}>← Edit</motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(0,255,136,0.2)' }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSubmit} 
+                    disabled={isSubmitting} 
+                    style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #00ff88, #00ccff)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.7 : 1 }}>
                     {isSubmitting ? 'Submitting...' : 'Confirm & Submit Bid'}
-                  </button>
+                  </motion.button>
                 </div>
                 {error && <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 14, color: '#ff6b6b', fontSize: '0.85rem' }}>{error}</div>}
               </>
@@ -170,7 +223,13 @@ const CommitPage: React.FC = () => {
                 <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.8rem', fontWeight: 800, marginBottom: 10 }}>Bid Committed! 🎉</h2>
                 <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Your sealed bid has been recorded. A backup JSON was downloaded.</p>
                 <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', marginBottom: 32 }}>Return during the Reveal Phase to reveal your bid.</p>
-                <button onClick={() => navigate(`/auction/${id}`)} style={{ background: 'linear-gradient(135deg, #00ff88, #00ccff)', border: 'none', borderRadius: 10, padding: '13px 32px', fontFamily: 'Outfit, sans-serif', fontWeight: 700, color: '#000', cursor: 'pointer' }}>View Auction</button>
+                <motion.button 
+                  whileHover={{ scale: 1.05, boxShadow: '0 0 32px rgba(0,255,136,0.3)' }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => navigate(`/auction/${id}`)} 
+                  style={{ background: 'linear-gradient(135deg, #00ff88, #00ccff)', border: 'none', borderRadius: 10, padding: '13px 32px', fontFamily: 'Outfit, sans-serif', fontWeight: 700, color: '#000', cursor: 'pointer' }}>
+                  View Auction
+                </motion.button>
               </div>
             )}
           </div>

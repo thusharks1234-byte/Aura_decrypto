@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Gavel, ShieldCheck, TrendingUp, ChevronRight, Play, Lock, Eye, Trophy, ArrowRight } from 'lucide-react';
+import { Gavel, ChevronRight, Play, Lock, Eye, Trophy, ArrowRight } from 'lucide-react';
+import { getPlatformStats } from '../lib/supabase';
+import { weiToEth } from '../lib/crypto';
 
 const steps = [
   { icon: Lock, title: 'Commit', description: 'Submit keccak256(amount + secret + address). Your bid is completely hidden from everyone.', color: '#00ccff' },
@@ -9,22 +11,49 @@ const steps = [
   { icon: Trophy, title: 'Win Fairly', description: 'Winner is determined on-chain. Losers can instantly claim refunds via pull-payment.', color: '#ffcc00' },
 ];
 
-const stats = [
-  { value: '$2.4M+', label: 'Volume Locked' },
-  { value: '142', label: 'Live Auctions' },
-  { value: '12.5k', label: 'Bidders' },
-  { value: '0', label: 'Front-runs Possible' },
-];
+const formatVolume = (wei: string): string => {
+  const eth = parseFloat(weiToEth(wei));
+  if (eth >= 1_000_000) return `${(eth / 1_000_000).toFixed(1)}M`;
+  if (eth >= 1_000) return `${(eth / 1_000).toFixed(1)}k`;
+  if (eth >= 1) return eth.toFixed(2);
+  return eth.toFixed(4);
+};
+
+const formatCount = (n: number): string => {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toString();
+};
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [particles, setParticles] = useState<{ x: number; y: number; size: number; speed: number }[]>([]);
+  const [stats, setStats] = useState([
+    { value: '—', label: 'Volume Locked' },
+    { value: '—', label: 'Live Auctions' },
+    { value: '—', label: 'Bidders' },
+    { value: '0', label: 'Front-runs Possible' },
+  ]);
+  const [, setStatsLoaded] = useState(false);
 
   useEffect(() => {
     setParticles(Array.from({ length: 30 }, () => ({
       x: Math.random() * 100, y: Math.random() * 100,
       size: Math.random() * 3 + 1, speed: Math.random() * 20 + 10,
     })));
+
+    // Fetch real platform stats from Supabase
+    getPlatformStats().then(({ data }) => {
+      if (data) {
+        setStats([
+          { value: `${formatVolume(data.volumeLockedWei)} ETH`, label: 'Volume Locked' },
+          { value: data.liveAuctions.toString(), label: 'Live Auctions' },
+          { value: formatCount(data.totalBidders), label: 'Bidders' },
+          { value: '0', label: 'Front-runs Possible' },
+        ]);
+      }
+      setStatsLoaded(true);
+    });
   }, []);
 
   return (
@@ -109,7 +138,8 @@ const LandingPage: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {stats.map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '28px 24px', textAlign: 'center' }}>
+              whileHover={{ y: -4, boxShadow: '0 12px 40px rgba(0,255,136,0.1)', borderColor: 'rgba(0,255,136,0.2)' }}
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '28px 24px', textAlign: 'center', cursor: 'default' }}>
               <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.2rem', fontWeight: 800, background: 'linear-gradient(135deg, #00ff88, #00ccff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 {s.value}
               </div>
@@ -130,7 +160,8 @@ const LandingPage: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           {steps.map((step, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }}
-              style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${step.color}20`, borderRadius: 20, padding: '32px 28px', position: 'relative', overflow: 'hidden' }}>
+              whileHover={{ y: -6, boxShadow: `0 16px 48px ${step.color}18`, borderColor: `${step.color}40` }}
+              style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${step.color}20`, borderRadius: 20, padding: '32px 28px', position: 'relative', overflow: 'hidden', cursor: 'default' }}>
               <div style={{ position: 'absolute', top: -30, right: -30, fontSize: '8rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900, color: `${step.color}06` }}>
                 {i + 1}
               </div>
@@ -151,14 +182,15 @@ const LandingPage: React.FC = () => {
           <Gavel size={40} color="#00ff88" style={{ marginBottom: 16 }} />
           <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2rem', fontWeight: 800, marginBottom: 12 }}>Ready to bid fairly?</h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Join thousands of bidders who trust the math, not the middleman.</p>
-          <button onClick={() => navigate('/dashboard')} style={{
+          <motion.button whileHover={{ scale: 1.05, boxShadow: '0 0 32px rgba(0,255,136,0.3)' }} whileTap={{ scale: 0.97 }}
+            onClick={() => navigate('/dashboard')} style={{
             background: 'linear-gradient(135deg, #00ff88, #00ccff)',
             border: 'none', borderRadius: 12, padding: '14px 36px',
             fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '1rem',
             color: '#000', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8,
           }}>
             Explore Auctions <ArrowRight size={18} />
-          </button>
+          </motion.button>
         </motion.div>
       </section>
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, DollarSign, RotateCcw, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, RotateCcw, CheckCircle } from 'lucide-react';
 import { getAuction, getBidsForAuction, type Auction, type Bid } from '../lib/supabase';
-import { weiToEth, verifyCommitHash } from '../lib/crypto';
+import { weiToEth } from '../lib/crypto';
 import PhaseBadge from '../components/PhaseBadge';
 
 const shortenAddr = (a: string) => a ? `${a.slice(0, 8)}...${a.slice(-6)}` : '';
@@ -49,9 +49,11 @@ const ResultsPage: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#050505', paddingTop: 64 }}>
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <Link to={`/auction/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }}>
-          <ArrowLeft size={16} /> Back to Auction
-        </Link>
+        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+          <Link to={`/auction/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }} className="interactive-hover">
+            <ArrowLeft size={16} /> Back to Auction
+          </Link>
+        </motion.div>
 
         <div style={{ marginBottom: 36 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -64,8 +66,12 @@ const ResultsPage: React.FC = () => {
         {/* Winner Banner */}
         {winner ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.1), rgba(0,204,255,0.1))', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 20, padding: '32px 28px', marginBottom: 28, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: -30, right: -30, fontSize: '8rem', opacity: 0.05 }}>🏆</div>
+            whileHover={{ scale: 1.01, boxShadow: '0 8px 32px rgba(0,255,136,0.1)' }}
+            style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.1), rgba(0,204,255,0.1))', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 20, padding: '32px 28px', marginBottom: 28, position: 'relative', overflow: 'hidden', cursor: 'default', transition: 'box-shadow 0.3s' }}>
+            <motion.div 
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ position: 'absolute', top: -30, right: -30, fontSize: '8rem', opacity: 0.05 }}>🏆</motion.div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg, #00ff88, #00ccff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Trophy size={28} color="#000" />
@@ -103,11 +109,18 @@ const ResultsPage: React.FC = () => {
             <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.875rem' }}>No bids have been revealed yet.</div>
           ) : (
             revealedBids.map((bid, i) => (
-              <div key={bid.id} style={{
-                display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
-                borderBottom: i < revealedBids.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                background: i === 0 ? 'rgba(0,255,136,0.03)' : 'transparent',
-              }}>
+              <motion.div 
+                key={bid.id} 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ background: 'rgba(255,255,255,0.04)' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
+                  borderBottom: i < revealedBids.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  background: i === 0 ? 'rgba(0,255,136,0.03)' : 'transparent',
+                  transition: 'background 0.2s'
+                }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: i === 0 ? 'linear-gradient(135deg, #ffcc00, #ff8800)' : i === 1 ? 'rgba(192,192,192,0.2)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', color: i === 0 ? '#000' : i === 1 ? '#c0c0c0' : 'rgba(255,255,255,0.4)', flexShrink: 0 }}>
                   {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                 </div>
@@ -121,7 +134,7 @@ const ResultsPage: React.FC = () => {
                   {weiToEth(bid.revealed_amount_wei || '0')} ETH
                 </div>
                 {i === 0 && <span style={{ padding: '3px 10px', borderRadius: 100, background: 'rgba(0,255,136,0.15)', color: '#00ff88', fontSize: '0.7rem', fontWeight: 700 }}>WINNER</span>}
-              </div>
+              </motion.div>
             ))
           )}
         </div>
@@ -146,9 +159,12 @@ const ResultsPage: React.FC = () => {
               <div key={bid.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{shortenAddr(bid.bidder_address)}</span>
                 <span style={{ color: '#00ccff', fontWeight: 600 }}>{weiToEth(bid.deposit_wei)} ETH</span>
-                <button style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: 'rgba(0,204,255,0.1)', color: '#00ccff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                <motion.button 
+                  whileHover={{ scale: 1.05, background: 'rgba(0,204,255,0.2)' }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: 'rgba(0,204,255,0.1)', color: '#00ccff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                   Claim
-                </button>
+                </motion.button>
               </div>
             ))
           )}

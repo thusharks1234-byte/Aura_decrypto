@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { User, Wallet, Award, Clock, Edit2, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../contexts/WalletContext';
-import { getMyBids } from '../lib/supabase';
+import { getMyBids, getDemoBalance } from '../lib/supabase';
 import { weiToEth } from '../lib/crypto';
 import AuthModal from '../components/AuthModal';
 
@@ -19,11 +19,13 @@ const ProfilePage: React.FC = () => {
   const [editName, setEditName] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [demoBalance, setDemoBalance] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     setNewName(profile?.display_name || '');
     getMyBids(user.id).then(({ data }) => { setMyBids(data || []); setIsLoading(false); });
+    getDemoBalance(user.id).then(bal => setDemoBalance(bal));
   }, [user, profile]);
 
   const saveName = async () => {
@@ -49,9 +51,10 @@ const ProfilePage: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#050505', paddingTop: 64 }}>
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           {/* Header Card */}
-          <div className="glass-card" style={{ padding: '32px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <motion.div className="glass-card" whileHover={{ borderColor: 'rgba(0,255,136,0.2)' }}
+            style={{ padding: '32px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, #00ff88, #00ccff)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <User size={36} color="#000" />
             </div>
@@ -93,10 +96,37 @@ const ProfilePage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
+
+          {/* Demo Balance Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            whileHover={{ scale: 1.01, boxShadow: '0 8px 32px rgba(255,204,0,0.1)' }}
+            style={{
+            background: 'linear-gradient(135deg, rgba(255,204,0,0.06), rgba(255,136,0,0.04))',
+            border: '1px solid rgba(255,204,0,0.15)', borderRadius: 16,
+            padding: '20px 24px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+          }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,204,0,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>⚗ Demo Balance</div>
+              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2rem', fontWeight: 800, color: '#ffcc00' }}>
+                {demoBalance.toFixed(4)} <span style={{ fontSize: '0.9rem', opacity: 0.6 }}>ETH</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Used for demo auctions only • Not connected to your wallet</div>
+            </div>
+            <div style={{
+              background: 'rgba(255,204,0,0.1)', borderRadius: 12, padding: '10px 18px',
+              fontSize: '0.8rem', color: 'rgba(255,204,0,0.8)', fontWeight: 600,
+            }}>
+              Initial: 5.0000 ETH
+            </div>
+          </motion.div>
 
           {/* Bid History */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', fontFamily: 'Outfit, sans-serif', fontWeight: 700 }}>My Bid History</div>
             {isLoading ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>Loading...</div>
@@ -119,7 +149,7 @@ const ProfilePage: React.FC = () => {
                 </span>
               </Link>
             ))}
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </div>

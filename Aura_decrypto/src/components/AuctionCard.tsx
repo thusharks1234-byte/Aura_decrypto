@@ -1,7 +1,6 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink, Clock, Users } from 'lucide-react';
 import type { Auction } from '../lib/supabase';
 import CountdownTimer from './CountdownTimer';
 import PhaseBadge from './PhaseBadge';
@@ -57,8 +56,17 @@ const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
           onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
         />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,5,0.8) 0%, transparent 60%)' }} />
-        <div style={{ position: 'absolute', top: 12, left: 12 }}>
+        <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <PhaseBadge status={auction.status} />
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 9px', borderRadius: 100, fontSize: '0.6rem', fontWeight: 800,
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            background: auction.is_demo ? 'rgba(255,204,0,0.85)' : 'rgba(0,255,136,0.85)',
+            color: '#000', backdropFilter: 'blur(6px)',
+          }}>
+            {auction.is_demo ? '⚗ DEMO' : '● LIVE'}
+          </span>
         </div>
         <div style={{
           position: 'absolute', top: 12, right: 12,

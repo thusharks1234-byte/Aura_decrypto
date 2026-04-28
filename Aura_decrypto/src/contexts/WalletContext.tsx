@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface WalletContextType {
   address: string | null;
@@ -20,10 +20,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     // Check if already connected
     const checkConnection = async () => {
       if (typeof window.ethereum !== 'undefined') {
-        const accounts: string[] = await window.ethereum.request({ method: 'eth_accounts' });
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
         if (accounts.length > 0) {
           setAddress(accounts[0]);
-          const chain = await window.ethereum.request({ method: 'eth_chainId' });
+          const chain = await window.ethereum.request({ method: 'eth_chainId' }) as string;
           setChainId(parseInt(chain, 16));
         }
       }
@@ -32,10 +32,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
     // Listen for account/chain changes
     if (typeof window.ethereum !== 'undefined') {
-      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+      window.ethereum.on('accountsChanged', (...args: unknown[]) => {
+        const accounts = args[0] as string[];
         setAddress(accounts[0] || null);
       });
-      window.ethereum.on('chainChanged', (chain: string) => {
+      window.ethereum.on('chainChanged', (...args: unknown[]) => {
+        const chain = args[0] as string;
         setChainId(parseInt(chain, 16));
       });
     }
@@ -48,9 +50,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsConnecting(true);
     try {
-      const accounts: string[] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
       setAddress(accounts[0]);
-      const chain = await window.ethereum.request({ method: 'eth_chainId' });
+      const chain = await window.ethereum.request({ method: 'eth_chainId' }) as string;
       setChainId(parseInt(chain, 16));
     } catch (e) {
       console.error('Wallet connect failed:', e);

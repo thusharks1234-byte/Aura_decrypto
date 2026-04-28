@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle, XCircle, Upload, AlertTriangle } from 'lucide-react';
 import { getAuction, getMyBid, revealBid, logAuctionEvent } from '../lib/supabase';
-import { computeCommitHash, ethToWei, weiToEth, verifyCommitHash } from '../lib/crypto';
+import { ethToWei, verifyCommitHash } from '../lib/crypto';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../contexts/WalletContext';
 import AuthModal from '../components/AuthModal';
@@ -20,14 +20,14 @@ const RevealPage: React.FC = () => {
   const { address } = useWallet();
   const [authOpen, setAuthOpen] = useState(false);
   const [myBid, setMyBid] = useState<{ id: string; commit_hash: string; encrypted_secret: string | null; deposit_wei: string; status: string } | null>(null);
-  const [auction, setAuction] = useState<{ title: string; status: string } | null>(null);
+  const [_auction, setAuction] = useState<{ title: string; status: string } | null>(null);
   const [revealSecret, setRevealSecret] = useState('');
   const [revealAmount, setRevealAmount] = useState('');
   const [hashMatch, setHashMatch] = useState<boolean | null>(null);
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [_success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (!id || !user) return;
@@ -88,9 +88,11 @@ const RevealPage: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#050505', paddingTop: 64 }}>
       <div style={{ maxWidth: 580, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <Link to={`/auction/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }}>
-          <ArrowLeft size={16} /> Back to Auction
-        </Link>
+        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+          <Link to={`/auction/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }} className="interactive-hover">
+            <ArrowLeft size={16} /> Back to Auction
+          </Link>
+        </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '32px 28px' }}>
 
@@ -114,11 +116,13 @@ const RevealPage: React.FC = () => {
           {step === 0 && myBid && (
             <>
               {error && <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#ff6b6b', fontSize: '0.85rem' }}>{error}</div>}
-              <label style={{ display: 'block', padding: '14px', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 10, cursor: 'pointer', textAlign: 'center', marginBottom: 20, fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>
+              <motion.label 
+                whileHover={{ borderColor: 'rgba(0,255,136,0.5)', background: 'rgba(255,255,255,0.06)' }}
+                style={{ display: 'block', padding: '14px', background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 10, cursor: 'pointer', textAlign: 'center', marginBottom: 20, fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', transition: 'all 0.2s' }}>
                 <Upload size={20} style={{ display: 'block', margin: '0 auto 8px' }} />
                 Upload Backup JSON (optional)
                 <input type="file" accept=".json" onChange={handleFileUpload} style={{ display: 'none' }} />
-              </label>
+              </motion.label>
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Your Secret</label>
                 <input style={inputStyle} placeholder="0x..." value={revealSecret} onChange={e => setRevealSecret(e.target.value)} />
@@ -133,7 +137,13 @@ const RevealPage: React.FC = () => {
                   {hashMatch ? 'Hash verified! Your inputs match the commitment.' : 'Hash mismatch. Check your secret or amount.'}
                 </div>
               )}
-              <button onClick={handleVerify} style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #ffcc00, #ff8800)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: 'pointer' }}>Verify Hash →</button>
+              <motion.button 
+                whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(255,204,0,0.2)' }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleVerify} 
+                style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #ffcc00, #ff8800)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: 'pointer' }}>
+                Verify Hash →
+              </motion.button>
             </>
           )}
 
@@ -149,10 +159,19 @@ const RevealPage: React.FC = () => {
               </div>
               {error && <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#ff6b6b', fontSize: '0.85rem' }}>{error}</div>}
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setStep(0)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 600, cursor: 'pointer' }}>← Back</button>
-                <button onClick={handleReveal} disabled={isSubmitting} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #ffcc00, #ff8800)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.7 : 1 }}>
+                <motion.button 
+                  whileHover={{ background: 'rgba(255,255,255,0.05)' }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setStep(0)} 
+                  style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 600, cursor: 'pointer' }}>← Back</motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(255,204,0,0.2)' }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleReveal} 
+                  disabled={isSubmitting} 
+                  style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #ffcc00, #ff8800)', color: '#000', fontFamily: 'Outfit, sans-serif', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.7 : 1 }}>
                   {isSubmitting ? 'Submitting...' : 'Submit Reveal'}
-                </button>
+                </motion.button>
               </div>
             </>
           )}
@@ -164,7 +183,13 @@ const RevealPage: React.FC = () => {
               </motion.div>
               <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.8rem', fontWeight: 800, marginBottom: 10 }}>Bid Revealed! 🎉</h2>
               <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 32 }}>Your {revealAmount} ETH bid has been revealed on-chain.</p>
-              <button onClick={() => navigate(`/auction/${id}/results`)} style={{ background: 'linear-gradient(135deg, #00ff88, #00ccff)', border: 'none', borderRadius: 10, padding: '13px 32px', fontFamily: 'Outfit, sans-serif', fontWeight: 700, color: '#000', cursor: 'pointer' }}>View Results</button>
+              <motion.button 
+                whileHover={{ scale: 1.05, boxShadow: '0 0 32px rgba(0,255,136,0.3)' }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate(`/auction/${id}/results`)} 
+                style={{ background: 'linear-gradient(135deg, #00ff88, #00ccff)', border: 'none', borderRadius: 10, padding: '13px 32px', fontFamily: 'Outfit, sans-serif', fontWeight: 700, color: '#000', cursor: 'pointer' }}>
+                View Results
+              </motion.button>
             </div>
           )}
         </motion.div>

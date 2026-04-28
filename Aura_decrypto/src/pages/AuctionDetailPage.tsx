@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, Users, Clock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, ShieldCheck } from 'lucide-react';
 import { getAuction, getBidsForAuction, getAuctionEvents, type Auction, type Bid } from '../lib/supabase';
 import { weiToEth } from '../lib/crypto';
 import PhaseBadge from '../components/PhaseBadge';
@@ -80,18 +80,23 @@ const AuctionDetailPage: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#050505', paddingTop: 64 }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
-        <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }}>
-          <ArrowLeft size={16} /> Back to Dashboard
-        </Link>
+        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+          <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 28, fontSize: '0.875rem' }} className="interactive-hover">
+            <ArrowLeft size={16} /> Back to Dashboard
+          </Link>
+        </motion.div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 32, alignItems: 'start' }}>
           {/* Left: Image + Info */}
           <div>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 24, background: '#111', aspectRatio: '16/9', position: 'relative' }}>
-              <img src={auction.asset_image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=60'} alt={auction.title}
+              <motion.img 
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.6 }}
+                src={auction.asset_image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=60'} alt={auction.title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,5,0.6) 0%, transparent 50%)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,5,0.6) 0%, transparent 50%)', pointerEvents: 'none' }} />
             </motion.div>
 
             {/* Auction Title */}
@@ -100,6 +105,15 @@ const AuctionDetailPage: React.FC = () => {
                 <PhaseBadge status={auction.status} size="md" />
                 <span style={{ background: auction.auction_type === 'vickrey' ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${auction.auction_type === 'vickrey' ? 'rgba(0,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 100, padding: '4px 12px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: auction.auction_type === 'vickrey' ? '#00ff88' : '#a0a0a0' }}>
                   {auction.auction_type === 'vickrey' ? '⚡ Vickrey' : 'Standard'}
+                </span>
+                <span style={{
+                  background: auction.is_demo ? 'rgba(255,204,0,0.15)' : 'rgba(0,255,136,0.1)',
+                  border: `1px solid ${auction.is_demo ? 'rgba(255,204,0,0.4)' : 'rgba(0,255,136,0.3)'}`,
+                  borderRadius: 100, padding: '4px 12px', fontSize: '0.72rem', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                  color: auction.is_demo ? '#ffcc00' : '#00ff88',
+                }}>
+                  {auction.is_demo ? '⚗ Demo' : '● Live'}
                 </span>
               </div>
               <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 800, marginBottom: 8 }}>{auction.title}</h1>
@@ -123,7 +137,13 @@ const AuctionDetailPage: React.FC = () => {
               ) : (
                 <div>
                   {bids.map((bid, i) => (
-                    <div key={bid.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: i < bids.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                    <motion.div 
+                      key={bid.id} 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      whileHover={{ background: 'rgba(255,255,255,0.04)' }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: i < bids.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', transition: 'background 0.2s' }}>
                       <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{shortenAddr(bid.bidder_address)}</div>
                       <div style={{ fontSize: '0.78rem' }}>
                         {bid.status === 'revealed' && bid.revealed_amount_wei ? (
@@ -135,7 +155,7 @@ const AuctionDetailPage: React.FC = () => {
                         )}
                       </div>
                       <span style={{ padding: '3px 10px', borderRadius: 100, fontSize: '0.7rem', fontWeight: 600, background: bid.status === 'won' ? 'rgba(0,255,136,0.1)' : bid.status === 'revealed' ? 'rgba(0,204,255,0.1)' : 'rgba(255,255,255,0.05)', color: bid.status === 'won' ? '#00ff88' : bid.status === 'revealed' ? '#00ccff' : 'rgba(255,255,255,0.4)' }}>{bid.status}</span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -173,11 +193,14 @@ const AuctionDetailPage: React.FC = () => {
                 ))}
               </div>
 
-              <button onClick={() => { if (ctaConfig && ctaConfig.to !== '#') navigate(ctaConfig.to); }}
+              <motion.button 
+                whileHover={{ scale: 1.03, boxShadow: '0 0 20px rgba(0,255,136,0.2)' }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { if (ctaConfig && ctaConfig.to !== '#') navigate(ctaConfig.to); }}
                 disabled={!ctaConfig || ctaConfig.to === '#'}
                 style={{ width: '100%', padding: '15px', borderRadius: 12, border: 'none', background: ctaConfig?.color || 'rgba(255,255,255,0.1)', color: ctaConfig?.textColor || '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '1rem', cursor: ctaConfig?.to !== '#' ? 'pointer' : 'not-allowed', transition: 'opacity 0.2s' }}>
                 {ctaConfig?.label}
-              </button>
+              </motion.button>
 
               {auction.status === 'ended' && (
                 <button onClick={() => navigate(`/auction/${id}/results`)} style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontFamily: 'Outfit, sans-serif', fontWeight: 600, cursor: 'pointer', marginTop: 10 }}>
