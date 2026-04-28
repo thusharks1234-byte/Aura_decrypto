@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm run build --prefix Aura_decrypto",
+  "outputDirectory": "Aura_decrypto/dist",
+  "framework": "vite"
+}
