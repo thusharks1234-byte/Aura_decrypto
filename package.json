@@ -1,0 +1,10 @@
+{
+  "name": "aura-decrypto-root",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix Aura_decrypto",
+    "install": "npm install --prefix Aura_decrypto",
+    "build": "npm run build --prefix Aura_decrypto",
+    "preview": "npm run preview --prefix Aura_decrypto"
+  }
+}
