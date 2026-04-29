@@ -23,12 +23,31 @@ const Navbar: React.FC = () => {
   const [authError, setAuthError] = useState('');
 
   useEffect(() => {
-    if (user) {
-      getDemoBalance(user.id).then(bal => setDemoBalance(bal));
-    } else {
-      const timer = setTimeout(() => setDemoBalance(null), 0);
-      return () => clearTimeout(timer);
+    if (!user) {
+      setDemoBalance(null);
+      return;
     }
+
+    // Initial fetch
+    getDemoBalance(user.id).then(setDemoBalance);
+
+    // Subscribe to profile changes for real-time balance updates
+    const channel = supabase
+      .channel(`profile_${user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${user.id}`,
+      }, (payload) => {
+        const newProfile = payload.new as { demo_balance: number };
+        if (newProfile.demo_balance !== undefined) {
+          setDemoBalance(newProfile.demo_balance);
+        }
+      })
+      .subscribe();
+
+    return () => { channel.unsubscribe(); };
   }, [user]);
 
   const navLinks = [

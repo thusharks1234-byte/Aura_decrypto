@@ -23,11 +23,13 @@ const ResultsPage: React.FC = () => {
   }, [id]);
 
   const validBids = bids
-    .filter(b => b.status === 'placed' || b.status === 'revealed' || b.status === 'won')
+    .filter(b => ['placed', 'revealed', 'won', 'lost', 'refunded', 'refund_pending'].includes(b.status))
     .sort((a, b) => Number(BigInt(b.revealed_amount_wei || b.deposit_wei || '0') - BigInt(a.revealed_amount_wei || a.deposit_wei || '0')));
 
-  const winner = validBids[0];
-  const secondPrice = validBids[1];
+  const winner = validBids.find(b => b.status === 'won') || validBids[0];
+  const losers = validBids.filter(b => b.id !== winner?.id);
+  const secondPrice = losers[0];
+  
   const pricePaid = auction?.auction_type === 'vickrey' && secondPrice
     ? (secondPrice.revealed_amount_wei || secondPrice.deposit_wei)
     : (winner?.revealed_amount_wei || winner?.deposit_wei);
@@ -133,7 +135,9 @@ const ResultsPage: React.FC = () => {
                 <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: i === 0 ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
                   {weiToEth(bid.revealed_amount_wei || bid.deposit_wei || '0')} ETH
                 </div>
-                {i === 0 && <span style={{ padding: '3px 10px', borderRadius: 100, background: 'rgba(var(--accent-primary-rgb), 0.15)', color: 'var(--accent-primary)', fontSize: '0.7rem', fontWeight: 700 }}>WINNER</span>}
+                {bid.status === 'won' && <span style={{ padding: '3px 10px', borderRadius: 100, background: 'rgba(var(--accent-primary-rgb), 0.15)', color: 'var(--accent-primary)', fontSize: '0.7rem', fontWeight: 700 }}>WINNER</span>}
+                {bid.status === 'refunded' && <span style={{ padding: '3px 10px', borderRadius: 100, background: 'rgba(var(--accent-secondary-rgb), 0.1)', color: 'var(--accent-secondary)', fontSize: '0.7rem', fontWeight: 700 }}>REFUNDED</span>}
+                {bid.status === 'lost' && !auction.is_demo && <span style={{ padding: '3px 10px', borderRadius: 100, background: 'rgba(var(--text-rgb), 0.05)', color: 'rgba(var(--text-rgb), 0.4)', fontSize: '0.7rem', fontWeight: 700 }}>PENDING</span>}
               </motion.div>
             ))
           )}
