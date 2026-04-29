@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface WalletContextType {
@@ -10,6 +11,9 @@ interface WalletContextType {
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
+
+const SEPOLIA_CHAIN_ID = '0xaa36a7';
+const SEPOLIA_RPC_URL = 'https://rpc.sepolia.org';
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<string | null>(null);
@@ -25,6 +29,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           setAddress(accounts[0]);
           const chain = await window.ethereum.request({ method: 'eth_chainId' }) as string;
           setChainId(parseInt(chain, 16));
+          if (chain !== SEPOLIA_CHAIN_ID) {
+            switchToTestnet();
+          }
         }
       }
     };
@@ -43,6 +50,37 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const switchToTestnet = async () => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: SEPOLIA_CHAIN_ID,
+                chainName: 'Sepolia Testnet',
+                rpcUrls: [SEPOLIA_RPC_URL],
+                nativeCurrency: { name: 'Sepolia Ether', symbol: 'SEP', decimals: 18 },
+                blockExplorerUrls: ['https://sepolia.etherscan.io'],
+              },
+            ],
+          });
+        } catch (addError) {
+          console.error('Failed to add network:', addError);
+        }
+      } else {
+        console.error('Failed to switch network:', switchError);
+      }
+    }
+  };
+
   const connect = async () => {
     if (typeof window.ethereum === 'undefined') {
       alert('MetaMask not detected. Please install MetaMask extension.');
@@ -54,6 +92,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setAddress(accounts[0]);
       const chain = await window.ethereum.request({ method: 'eth_chainId' }) as string;
       setChainId(parseInt(chain, 16));
+      if (chain !== SEPOLIA_CHAIN_ID) {
+        await switchToTestnet();
+      }
     } catch (e) {
       console.error('Wallet connect failed:', e);
     } finally {

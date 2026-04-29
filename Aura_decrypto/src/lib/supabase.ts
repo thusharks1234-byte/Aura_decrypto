@@ -16,7 +16,7 @@ export interface Auction {
   commit_start: string;
   commit_end: string;
   reveal_end: string;
-  status: 'upcoming' | 'commit' | 'reveal' | 'ended' | 'cancelled';
+  status: 'upcoming' | 'commit' | 'reveal' | 'active' | 'ended' | 'cancelled';
   winner_address: string | null;
   winning_bid_wei: string | null;
   price_paid_wei: string | null;
@@ -35,7 +35,7 @@ export interface Bid {
   commit_hash: string;
   encrypted_secret: string | null;
   revealed_amount_wei: string | null;
-  status: 'committed' | 'revealed' | 'invalid' | 'won' | 'lost' | 'refund_pending' | 'refunded';
+  status: 'committed' | 'revealed' | 'invalid' | 'won' | 'lost' | 'refund_pending' | 'refunded' | 'placed';
   commit_tx_hash: string | null;
   reveal_tx_hash: string | null;
   deposit_wei: string;
@@ -73,7 +73,7 @@ export const getAuction = async (id: string) => {
   return { data: data as Auction | null, error };
 };
 
-export const createAuction = async (auction: Omit<Auction, 'id' | 'created_at' | 'status' | 'winner_address' | 'winning_bid_wei' | 'price_paid_wei' | 'profiles'>) => {
+export const createAuction = async (auction: Omit<Auction, 'id' | 'created_at' | 'winner_address' | 'winning_bid_wei' | 'price_paid_wei' | 'profiles'>) => {
   const { data, error } = await supabase.from('auctions').insert(auction).select().single();
   return { data: data as Auction | null, error };
 };
@@ -105,6 +105,17 @@ export const getMyBid = async (auctionId: string, userId: string) => {
 
 export const submitBid = async (bid: Omit<Bid, 'id' | 'created_at' | 'revealed_at' | 'status' | 'revealed_amount_wei'>) => {
   const { data, error } = await supabase.from('bids').insert({ ...bid, status: 'committed' }).select().single();
+  return { data: data as Bid | null, error };
+};
+
+export const placeBid = async (bid: Omit<Bid, 'id' | 'created_at' | 'revealed_at' | 'status' | 'commit_hash' | 'encrypted_secret' | 'revealed_amount_wei'>) => {
+  const { data, error } = await supabase.from('bids').insert({ 
+    ...bid, 
+    status: 'placed',
+    commit_hash: 'open_bid_' + bid.deposit_wei,
+    encrypted_secret: null,
+    revealed_amount_wei: bid.deposit_wei 
+  }).select().single();
   return { data: data as Bid | null, error };
 };
 

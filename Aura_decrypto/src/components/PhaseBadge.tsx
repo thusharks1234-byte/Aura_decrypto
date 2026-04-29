@@ -1,12 +1,14 @@
 import React from 'react';
 import type { Auction } from '../lib/supabase';
 
-const phaseConfig = {
-  upcoming: { label: 'Upcoming', color: '#a0a0a0', bg: 'rgba(160,160,160,0.1)', border: 'rgba(160,160,160,0.2)' },
-  commit: { label: 'Commit Phase', color: '#00ccff', bg: 'rgba(0,204,255,0.1)', border: 'rgba(0,204,255,0.3)' },
-  reveal: { label: 'Reveal Phase', color: '#ffcc00', bg: 'rgba(255,204,0,0.1)', border: 'rgba(255,204,0,0.3)' },
-  ended: { label: 'Ended', color: '#00ff88', bg: 'rgba(0,255,136,0.1)', border: 'rgba(0,255,136,0.3)' },
-  cancelled: { label: 'Cancelled', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.3)' },
+type PhaseConfig = { label: string; color: string; bg: string; border: string };
+const phaseConfig: Record<string, PhaseConfig> = {
+  upcoming: { label: 'Upcoming', color: 'var(--text-secondary)', bg: 'rgba(160,160,160,0.1)', border: 'rgba(160,160,160,0.2)' },
+  active: { label: 'Live Auction', color: 'var(--accent-primary)', bg: 'rgba(var(--accent-primary-rgb), 0.1)', border: 'rgba(var(--accent-primary-rgb), 0.3)' },
+  commit: { label: 'Live Auction', color: 'var(--accent-primary)', bg: 'rgba(var(--accent-primary-rgb), 0.1)', border: 'rgba(var(--accent-primary-rgb), 0.3)' },
+  reveal: { label: 'Ending Soon', color: 'var(--warning)', bg: 'rgba(var(--warning-rgb), 0.1)', border: 'rgba(var(--warning-rgb), 0.3)' },
+  ended: { label: 'Ended', color: 'var(--text-secondary)', bg: 'rgba(var(--text-rgb), 0.05)', border: 'rgba(var(--text-rgb), 0.1)' },
+  cancelled: { label: 'Cancelled', color: 'var(--error)', bg: 'rgba(var(--error-rgb), 0.1)', border: 'rgba(var(--error-rgb), 0.3)' },
 };
 
 interface PhaseBadgeProps {
@@ -36,7 +38,7 @@ const PhaseBadge: React.FC<PhaseBadgeProps> = ({ status, size = 'sm' }) => {
         height: size === 'sm' ? 6 : 8,
         borderRadius: '50%',
         background: cfg.color,
-        animation: (status === 'commit' || status === 'reveal') ? 'pulse 2s infinite' : undefined,
+        animation: (status === 'active' || status === 'commit' || status === 'reveal') ? 'pulse 2s infinite' : undefined,
       }} />
       {cfg.label}
     </span>
