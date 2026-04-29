@@ -20,6 +20,37 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [chainId, setChainId] = useState<number | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  const switchToTestnet = async () => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+    } catch (switchError: unknown) {
+      if ((switchError as { code: number }).code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: SEPOLIA_CHAIN_ID,
+                chainName: 'Sepolia Testnet',
+                rpcUrls: [SEPOLIA_RPC_URL],
+                nativeCurrency: { name: 'Sepolia Ether', symbol: 'SEP', decimals: 18 },
+                blockExplorerUrls: ['https://sepolia.etherscan.io'],
+              },
+            ],
+          });
+        } catch (addError) {
+          console.error('Failed to add network:', addError);
+        }
+      } else {
+        console.error('Failed to switch network:', switchError);
+      }
+    }
+  };
+
   useEffect(() => {
     // Check if already connected
     const checkConnection = async () => {
@@ -49,37 +80,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   }, []);
-
-  const switchToTestnet = async () => {
-    if (!window.ethereum) return;
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: SEPOLIA_CHAIN_ID }],
-      });
-    } catch (switchError: any) {
-      if (switchError.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: SEPOLIA_CHAIN_ID,
-                chainName: 'Sepolia Testnet',
-                rpcUrls: [SEPOLIA_RPC_URL],
-                nativeCurrency: { name: 'Sepolia Ether', symbol: 'SEP', decimals: 18 },
-                blockExplorerUrls: ['https://sepolia.etherscan.io'],
-              },
-            ],
-          });
-        } catch (addError) {
-          console.error('Failed to add network:', addError);
-        }
-      } else {
-        console.error('Failed to switch network:', switchError);
-      }
-    }
-  };
 
   const connect = async () => {
     if (typeof window.ethereum === 'undefined') {

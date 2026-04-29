@@ -25,7 +25,6 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     if (user) {
       getDemoBalance(user.id).then(bal => setDemoBalance(bal));
-      setMobileOpen(false); // Close drawer on successful auth
     } else {
       const timer = setTimeout(() => setDemoBalance(null), 0);
       return () => clearTimeout(timer);
@@ -56,9 +55,9 @@ const Navbar: React.FC = () => {
         }
       });
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      setAuthError(err.message || 'Failed to initialize Google login.');
+      setAuthError(err instanceof Error ? err.message : 'Failed to initialize Google login.');
       setIsLoggingIn(false);
     }
   };
@@ -81,9 +80,9 @@ const Navbar: React.FC = () => {
         }
       });
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Gmail Login error:', err);
-      setAuthError(err.message || 'Failed to initialize Gmail login.');
+      setAuthError(err instanceof Error ? err.message : 'Failed to initialize Gmail login.');
       setIsLoggingIn(false);
     }
   };

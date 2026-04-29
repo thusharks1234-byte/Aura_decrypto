@@ -128,24 +128,38 @@ const formatCount = (n: number): string => {
   return n.toString();
 };
 
-const ParticleBackground = () => (
-  <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-    {Array.from({ length: 40 }).map((_, i) => (
-      <div
-        key={i}
-        className="particle"
-        style={{
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-          width: Math.random() * 2 + 2,
-          height: Math.random() * 2 + 2,
-          animationDuration: `${Math.random() * 10 + 15}s`,
-          animationDelay: `-${Math.random() * 10}s`
-        }}
-      />
-    ))}
-  </div>
-);
+const ParticleBackground = () => {
+  const [particles] = useState(() => 
+    Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      width: Math.random() * 2 + 2,
+      height: Math.random() * 2 + 2,
+      duration: `${Math.random() * 10 + 15}s`,
+      delay: `-${Math.random() * 10}s`
+    }))
+  );
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="particle"
+          style={{
+            left: p.left,
+            top: p.top,
+            width: p.width,
+            height: p.height,
+            animationDuration: p.duration,
+            animationDelay: p.delay
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();

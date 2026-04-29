@@ -58,7 +58,7 @@ const NotificationBell: React.FC = () => {
         if (newNotif.type === 'auction_won' && user.email) {
           // Extract title and amount from message if possible, or use placeholders
           // Message format: "Congratulations! You won the auction \"Title\" with a bid of 1.23 ETH!"
-          const titleMatch = newNotif.message.match(/\"(.*?)\"/);
+          const titleMatch = newNotif.message.match(/"(.*?)"/);
           const amountMatch = newNotif.message.match(/of (.*?) ETH/);
           
           const title = titleMatch ? titleMatch[1] : 'Auction Asset';

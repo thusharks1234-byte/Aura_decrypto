@@ -6,5 +6,9 @@
     "install": "npm install --prefix Aura_decrypto",
     "build": "npm run build --prefix Aura_decrypto",
     "preview": "npm run preview --prefix Aura_decrypto"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.1",
+    "nodemailer": "^8.0.7"
   }
 }
