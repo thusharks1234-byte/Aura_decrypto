@@ -24,7 +24,6 @@ const Navbar: React.FC = () => {
 
   useEffect(() => {
     if (!user) {
-      setDemoBalance(null);
       return;
     }
 

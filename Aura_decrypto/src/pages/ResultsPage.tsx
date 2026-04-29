@@ -5,6 +5,8 @@ import { ArrowLeft, Trophy, Medal, RotateCcw, CheckCircle, Activity } from 'luci
 import { getAuction, getBidsForAuction, type Auction, type Bid } from '../lib/supabase';
 import { weiToEth } from '../lib/crypto';
 import PhaseBadge from '../components/PhaseBadge';
+import { supabase } from '../lib/supabaseClient';
+import type { RealtimePostgresUpdatePayload } from '@supabase/supabase-js';
 
 const shortenAddr = (a: string) => a ? `${a.slice(0, 8)}...${a.slice(-6)}` : '';
 
@@ -16,10 +18,46 @@ const ResultsPage: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      getAuction(id).then(({ data }) => setAuction(data)),
-      getBidsForAuction(id).then(({ data }) => setBids(data || [])),
-    ]).finally(() => setIsLoading(false));
+
+    async function loadData() {
+      setIsLoading(true);
+      await Promise.all([
+        getAuction(id!).then(({ data }) => setAuction(data)),
+        getBidsForAuction(id!).then(({ data }) => setBids(data || [])),
+      ]);
+      setIsLoading(false);
+    }
+
+    loadData();
+
+    // Subscribe to auction changes (e.g. status becoming 'ended')
+    const auctionSub = supabase.channel(`auction_results_${id}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'auctions', 
+        filter: `id=eq.${id}` 
+      }, (payload: RealtimePostgresUpdatePayload<Auction>) => {
+        setAuction(payload.new as Auction);
+      })
+      .subscribe();
+
+    // Subscribe to bid changes (e.g. status becoming 'won', 'lost', 'refunded')
+    const bidsSub = supabase.channel(`bids_results_${id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'bids', 
+        filter: `auction_id=eq.${id}` 
+      }, () => {
+        getBidsForAuction(id!).then(({ data }) => setBids(data || []));
+      })
+      .subscribe();
+
+    return () => {
+      auctionSub.unsubscribe();
+      bidsSub.unsubscribe();
+    };
   }, [id]);
 
   const validBids = bids

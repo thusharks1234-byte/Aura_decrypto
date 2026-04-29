@@ -47,12 +47,29 @@ const AuctionDetailPage: React.FC = () => {
     }
 
     loadData();
+
+    // Subscribe to auction changes (status, winner, etc.)
+    const auctionSub = supabase.channel(`auction_detail_${id}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'auctions', 
+        filter: `id=eq.${id}` 
+      }, (payload) => {
+        setAuction(payload.new as Auction);
+      })
+      .subscribe();
+
     // Realtime subscription for bids
-    const sub = supabase.channel(`auction_${id}`)
+    const bidsSub = supabase.channel(`auction_bids_${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bids', filter: `auction_id=eq.${id}` },
         () => loadBids())
       .subscribe();
-    return () => { sub.unsubscribe(); };
+
+    return () => { 
+      auctionSub.unsubscribe();
+      bidsSub.unsubscribe(); 
+    };
   }, [id]);
 
   useEffect(() => {
