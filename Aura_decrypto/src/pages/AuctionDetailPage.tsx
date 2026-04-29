@@ -17,7 +17,7 @@ const AuctionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { address, connect } = useWallet();
+  const { address, connect, balance } = useWallet();
   
   const [auction, setAuction] = useState<Auction | null>(null);
   const [bids, setBids] = useState<Bid[]>([]);
@@ -83,8 +83,17 @@ const AuctionDetailPage: React.FC = () => {
     if (!auction) return;
     
     const isDemo = auction.is_demo;
-    if (!isDemo && !address) { connect(); return; }
     if (!bidAmount || Number(bidAmount) <= 0) { setError('Enter a valid bid amount'); return; }
+
+    if (!isDemo) {
+      if (!address) { connect(); return; }
+      // Check real ETH balance
+      const requiredEth = Number(bidAmount) + 0.001; // Bid + buffer for gas
+      if (!balance || Number(balance) < requiredEth) {
+        setError(`Insufficient ETH. You have ${balance || '0'} ETH, but this bid requires ~${requiredEth.toFixed(4)} ETH (including gas).`);
+        return;
+      }
+    }
     
     // Check if bid is higher than current max
     const highestBidWei = bids.length > 0 ? Math.max(...bids.map(b => Number(b.revealed_amount_wei || 0))) : Number(auction.reserve_price_wei);
@@ -312,9 +321,13 @@ const AuctionDetailPage: React.FC = () => {
                       <Activity size={12} />
                       Estimated Gas: <span style={{ color: 'var(--text-secondary)' }}>~0.0005 ETH</span>
                     </div>
-                    {user && auction.is_demo && (
+                    {user && (
                       <div style={{ fontSize: '0.8rem', color: 'rgba(var(--text-rgb), 0.4)' }}>
-                        Demo Balance: <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{demoBalance.toFixed(3)} ETH</span>
+                        {auction.is_demo ? (
+                          <>Demo Balance: <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{demoBalance.toFixed(3)} ETH</span></>
+                        ) : address && (
+                          <>Wallet Balance: <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{balance || '0.000'} ETH</span></>
+                        )}
                       </div>
                     )}
                   </div>

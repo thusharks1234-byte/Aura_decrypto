@@ -1,13 +1,15 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 
 interface WalletContextType {
   address: string | null;
+  balance: string | null; // Balance in ETH
   chainId: number | null;
   isConnecting: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
   isConnected: boolean;
+  refreshBalance: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
@@ -17,8 +19,33 @@ const SEPOLIA_RPC_URL = 'https://rpc.sepolia.org';
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  const refreshBalance = useCallback(async () => {
+    if (!window.ethereum || !address) return;
+    try {
+      const balHex = await window.ethereum.request({
+        method: 'eth_getBalance',
+        params: [address, 'latest'],
+      }) as string;
+      const balWei = BigInt(balHex);
+      const balEth = (Number(balWei) / 1e18).toFixed(4);
+      setBalance(balEth);
+    } catch (e) {
+      console.error('Failed to fetch balance:', e);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    if (address) {
+      const timer = setTimeout(() => refreshBalance(), 0);
+      return () => clearTimeout(timer);
+    } else {
+      setBalance(null);
+    }
+  }, [address, refreshBalance]);
 
   const switchToTestnet = async () => {
     if (!window.ethereum) return;
@@ -108,7 +135,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <WalletContext.Provider value={{ address, chainId, isConnecting, connect, disconnect, isConnected: !!address }}>
+    <WalletContext.Provider value={{ address, balance, chainId, isConnecting, connect, disconnect, isConnected: !!address, refreshBalance }}>
       {children}
     </WalletContext.Provider>
   );
