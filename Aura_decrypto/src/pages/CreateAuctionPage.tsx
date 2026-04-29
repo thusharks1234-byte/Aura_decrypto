@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Info, AlertTriangle } from 'lucide-react';
+import { ChevronRight, Info, AlertTriangle, Activity } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { createAuction } from '../lib/supabase';
 import { ethToWei } from '../lib/crypto';
@@ -175,6 +175,11 @@ const CreateAuctionPage: React.FC = () => {
               style={{ width: '100%', padding: '16px', borderRadius: 12, border: 'none', background: isSubmitting ? 'rgba(var(--text-rgb), 0.1)' : 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', color: isSubmitting ? 'rgba(var(--text-rgb), 0.4)' : 'var(--btn-text)', fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '1.05rem', cursor: isSubmitting ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
               {isSubmitting ? 'Creating...' : <> Deploy Auction <ChevronRight size={18} /></>}
             </motion.button>
+
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16, color: 'rgba(var(--text-rgb), 0.4)', fontSize: '0.8rem' }}>
+              <Activity size={14} />
+              Est. Deployment Gas: <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>~0.0025 ETH</span>
+            </div>
           </form>
         </motion.div>
       </div>

@@ -290,9 +290,21 @@ const AuctionDetailPage: React.FC = () => {
                     {isBidding ? 'Placing Bid...' : <>Place Bid <ArrowUpRight size={20} /></>}
                   </motion.button>
 
-                  {user && auction.is_demo && (
-                    <div style={{ textAlign: 'center', marginTop: 16, fontSize: '0.8rem', color: 'rgba(var(--text-rgb), 0.4)' }}>
-                      Demo Balance: <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{demoBalance.toFixed(3)} ETH</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'rgba(var(--text-rgb), 0.4)' }}>
+                      <Activity size={12} />
+                      Estimated Gas: <span style={{ color: 'var(--text-secondary)' }}>~0.0005 ETH</span>
+                    </div>
+                    {user && auction.is_demo && (
+                      <div style={{ fontSize: '0.8rem', color: 'rgba(var(--text-rgb), 0.4)' }}>
+                        Demo Balance: <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{demoBalance.toFixed(3)} ETH</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {!auction.is_demo && (
+                    <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(var(--accent-primary-rgb), 0.05)', borderRadius: 8, fontSize: '0.7rem', color: 'rgba(var(--text-rgb), 0.5)', border: '1px solid rgba(var(--accent-primary-rgb), 0.1)' }}>
+                      Note: This is a <strong>Live</strong> auction. Placing a bid requires a Sepolia ETH transaction and gas fees.
                     </div>
                   )}
                 </div>

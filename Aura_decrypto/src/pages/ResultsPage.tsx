@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, RotateCcw, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, RotateCcw, CheckCircle, Activity } from 'lucide-react';
 import { getAuction, getBidsForAuction, type Auction, type Bid } from '../lib/supabase';
 import { weiToEth } from '../lib/crypto';
 import PhaseBadge from '../components/PhaseBadge';
@@ -161,9 +161,20 @@ const ResultsPage: React.FC = () => {
               </div>
             ))
           )}
-          <p style={{ fontSize: '0.75rem', color: 'rgba(var(--text-rgb), 0.2)', marginTop: 12 }}>
-            Refunds use pull-payment pattern (CEI compliant). In production, call claimRefund() on the smart contract.
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+            <p style={{ fontSize: '0.75rem', color: 'rgba(var(--text-rgb), 0.2)', margin: 0 }}>
+              Refunds use pull-payment pattern (CEI compliant).
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: 'rgba(var(--text-rgb), 0.25)' }}>
+              <Activity size={12} />
+              Estimated Gas: <span style={{ color: 'rgba(var(--text-rgb), 0.35)' }}>~0.0003 ETH</span>
+            </div>
+          </div>
+          {!auction.is_demo && (
+            <p style={{ fontSize: '0.72rem', color: 'rgba(var(--accent-secondary-rgb), 0.4)', marginTop: 8, margin: 0 }}>
+              * Claiming on-chain requires a Sepolia ETH transaction.
+            </p>
+          )}
         </div>
 
         {/* Verification Panel */}
