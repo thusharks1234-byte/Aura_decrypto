@@ -5,10 +5,14 @@
     "dev": "npm run dev --prefix Aura_decrypto",
     "install": "npm install --prefix Aura_decrypto",
     "build": "npm run build --prefix Aura_decrypto",
-    "preview": "npm run preview --prefix Aura_decrypto"
+    "preview": "npm run preview --prefix Aura_decrypto",
+    "start": "node server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "nodemailer": "^8.0.7"
   }
 }
